@@ -1,0 +1,312 @@
+openapi: 3.0.3
+
+info:
+  title: Book Management API
+  version: 1.0.0
+  description: API đơn giản quản lý sách với 5 endpoints (list, create, retrieve, update, delete).
+
+servers:
+  - url: https://api.example.com/v1
+    description: Production
+  - url: https://staging.example.com/v1
+    description: Staging
+    
+tags:
+  - name: Books
+    description: Thao tác với tài nguyên sách
+
+paths:
+  /books:
+    get:
+      tags: [Books]
+      summary: Danh sách sách
+      description: Trả về danh sách sách có phân trang và lọc theo trạng thái.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - name: status
+          in: query
+          description: Lọc theo trạng thái
+          required: false
+          schema:
+            type: string
+            enum: [available, borrowed]
+      responses:
+        '200':
+          description: Danh sách sách
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookListResponse'
+              examples:
+                sample:
+                  value:
+                    items:
+                      - id: 1
+                        title: "Clean Architecture"
+                        author: "Robert C. Martin"
+                        status: "available"
+                        published_at: "2017-09-20"
+                      - id: 2
+                        title: "Designing Data-Intensive Applications"
+                        author: "Martin Kleppmann"
+                        status: "borrowed"
+                        published_at: "2017-03-16"
+                    page: 1
+                    limit: 20
+                    total: 2
+    post:
+      tags: [Books]
+      summary: Tạo sách
+      description: Tạo mới một bản ghi sách.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookCreate'
+            examples:
+              example:
+                value:
+                  title: "The Pragmatic Programmer"
+                  author: "Andrew Hunt, David Thomas"
+                  status: "available"
+                  published_at: "1999-10-20"
+      responses:
+        '201':
+          description: Tạo thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /books/{id}:
+    get:
+      tags: [Books]
+      summary: Xem chi tiết sách
+      parameters:
+        - $ref: '#/components/parameters/BookId'
+      responses:
+        '200':
+          description: Chi tiết sách
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+              examples:
+                sample:
+                  value:
+                    id: 1
+                    title: "Clean Code"
+                    author: "Robert C. Martin"
+                    status: "available"
+                    published_at: "2008-08-01"
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Books]
+      summary: Cập nhật sách
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BookId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookUpdate'
+            examples:
+              example:
+                value:
+                  title: "Clean Code (2nd Edition)"
+                  status: "available"
+      responses:
+        '200':
+          description: Cập nhật thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Books]
+      summary: Xóa sách
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/BookId'
+      responses:
+        '204':
+          description: Xóa thành công (không có nội dung trả về)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    BookId:
+      name: id
+      in: path
+      required: true
+      description: ID của sách
+      schema:
+        type: integer
+        minimum: 1
+    Page:
+      name: page
+      in: query
+      description: Trang hiện tại (>= 1)
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Limit:
+      name: limit
+      in: query
+      description: Số bản ghi mỗi trang (1-100)
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  responses:
+    BadRequest:
+      description: Yêu cầu không hợp lệ
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            example:
+              value:
+                error: "Bad request"
+                details:
+                  field: "title"
+                  message: "Title is required"
+    Unauthorized:
+      description: Chưa xác thực hoặc token không hợp lệ
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            example:
+              value:
+                error: "Unauthorized"
+    NotFound:
+      description: Không tìm thấy tài nguyên
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            example:
+              value:
+                error: "Resource not found"
+
+  schemas:
+    Book:
+      type: object
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        title:
+          type: string
+          minLength: 1
+        author:
+          type: string
+        status:
+          type: string
+          enum: [available, borrowed]
+        published_at:
+          type: string
+          format: date
+      required: [id, title, status]
+
+    BookCreate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+        author:
+          type: string
+        status:
+          type: string
+          enum: [available, borrowed]
+          default: available
+        published_at:
+          type: string
+          format: date
+      required: [title]
+
+    BookUpdate:
+      type: object
+      description: Trường nào gửi lên sẽ được cập nhật (partial update via PUT cho demo).
+      properties:
+        title:
+          type: string
+          minLength: 1
+        author:
+          type: string
+        status:
+          type: string
+          enum: [available, borrowed]
+        published_at:
+          type: string
+          format: date
+      additionalProperties: false
+
+    BookListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Book'
+        page:
+          type: integer
+          minimum: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+      required: [items, page, limit, total]
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: object
+      required: [error]
+
+security:
+  - BearerAuth: []
