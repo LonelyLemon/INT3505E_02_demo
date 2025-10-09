@@ -10,10 +10,10 @@ servers:
     description: Production
   - url: https://staging.example.com/v1
     description: Staging
-    
+
 tags:
   - name: Books
-    description: Thao tác với tài nguyên sách
+    description: Các API endpoints quản lý sách.
 
 paths:
   /books:
@@ -58,7 +58,7 @@ paths:
     post:
       tags: [Books]
       summary: Tạo sách
-      description: Tạo mới một bản ghi sách.
+      description: Tạo mới một quyển sách.
       security:
         - BearerAuth: []
       requestBody:
@@ -149,7 +149,7 @@ paths:
         - $ref: '#/components/parameters/BookId'
       responses:
         '204':
-          description: Xóa thành công (không có nội dung trả về)
+          description: Xóa thành công.
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -265,7 +265,7 @@ components:
 
     BookUpdate:
       type: object
-      description: Trường nào gửi lên sẽ được cập nhật (partial update via PUT cho demo).
+      description: Cập nhật các trường dữ liệu được nhập.
       properties:
         title:
           type: string
