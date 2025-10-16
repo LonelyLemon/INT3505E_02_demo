@@ -1,0 +1,285 @@
+openapi: 3.0.3
+info:
+  title: Library API
+  version: "1.0.0"
+servers:
+  - url: /
+paths:
+  /api/v1/health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+  /api/v1/users:
+    post:
+      summary: Create user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserCreate"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "409":
+          description: Conflict
+  /api/v1/users/{user_id}:
+    get:
+      summary: Get user detail
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Not found
+    put:
+      summary: Update user
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Not found
+    delete:
+      summary: Delete user
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+  /api/v1/books:
+    get:
+      summary: List books
+      parameters:
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, default: 10 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total: { type: integer }
+                  offset: { type: integer }
+                  limit: { type: integer }
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Book"
+    post:
+      summary: Create book
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookCreate"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Book"
+  /api/v1/books/{book_id}:
+    get:
+      summary: Get book detail
+      parameters:
+        - name: book_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Book"
+        "404":
+          description: Not found
+    put:
+      summary: Update book
+      parameters:
+        - name: book_id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Book"
+        "400":
+          description: Bad request
+        "404":
+          description: Not found
+    delete:
+      summary: Delete book
+      parameters:
+        - name: book_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+  /api/v1/books/search:
+    get:
+      summary: Search books
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, default: 10 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total: { type: integer }
+                  offset: { type: integer }
+                  limit: { type: integer }
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Book"
+  /api/v1/borrows:
+    post:
+      summary: Create borrow request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BorrowCreate"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  borrow:
+                    $ref: "#/components/schemas/Borrow"
+                  book:
+                    $ref: "#/components/schemas/Book"
+components:
+  schemas:
+    UserCreate:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string }
+        password: { type: string }
+    UserUpdate:
+      type: object
+      properties:
+        username: { type: string }
+        password: { type: string }
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        username: { type: string }
+    BookCreate:
+      type: object
+      required: [name, author]
+      properties:
+        name: { type: string }
+        author: { type: string }
+        status:
+          type: string
+          enum: [free, borrowed]
+    BookUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        author: { type: string }
+        status:
+          type: string
+          enum: [free, borrowed]
+    Book:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        author: { type: string }
+        status:
+          type: string
+          enum: [free, borrowed]
+    BorrowCreate:
+      type: object
+      required: [user_id, book_id]
+      properties:
+        user_id: { type: integer }
+        book_id: { type: integer }
+    Borrow:
+      type: object
+      properties:
+        id: { type: integer }
+        user_id: { type: integer }
+        book_id: { type: integer }
+        status: { type: string }
