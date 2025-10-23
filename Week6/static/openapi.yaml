@@ -1,0 +1,363 @@
+openapi: 3.0.3
+info:
+  title: Library API
+  version: 1.0.0
+  description: >
+    Simple Library Management API with OAuth2 Password + JWT.
+    All book management endpoints are protected (Bearer JWT).
+
+servers:
+  - url: http://localhost:5001/api/v1
+
+components:
+  securitySchemes:
+    OAuth2Password:
+      type: oauth2
+      flows:
+        password:
+          tokenUrl: /api/v1/auth/login
+          scopes: {}
+  schemas:
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          example: bearer
+      required: [access_token, token_type]
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        username: { type: string }
+      required: [id, username]
+    RegisterInput:
+      type: object
+      properties:
+        username: { type: string }
+        password: { type: string }
+      required: [username, password]
+    LoginInput:
+      type: object
+      properties:
+        username: { type: string }
+        password: { type: string }
+      required: [username, password]
+    Book:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        author: { type: string }
+        status:
+          type: string
+          enum: [free, borrowed]
+      required: [id, name, author, status]
+    BookCreate:
+      type: object
+      properties:
+        name: { type: string }
+        author: { type: string }
+        status:
+          type: string
+          enum: [free, borrowed]
+      required: [name, author]
+    BookUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        author: { type: string }
+        status:
+          type: string
+          enum: [free, borrowed]
+    PagedBooks:
+      type: object
+      properties:
+        total: { type: integer }
+        offset: { type: integer }
+        limit: { type: integer }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Book" }
+      required: [total, offset, limit, items]
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+      required: [error]
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      security: []
+      responses:
+        "200":
+          description: OK
+
+  /auth/register:
+    post:
+      summary: Register new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RegisterInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /auth/login:
+    post:
+      summary: OAuth2 Password login -> JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LoginInput" }
+      responses:
+        "200":
+          description: JWT Token
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TokenResponse" }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /users/me:
+    get:
+      summary: Get current user
+      security:
+        - OAuth2Password: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /books:
+    get:
+      summary: List books (protected, pagination offset/limit)
+      security:
+        - OAuth2Password: []
+      parameters:
+        - in: query
+          name: offset
+          schema: { type: integer, minimum: 0, default: 0 }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, default: 10 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PagedBooks" }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+    post:
+      summary: Create a book (protected)
+      security:
+        - OAuth2Password: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BookCreate" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Book" }
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /books/search:
+    get:
+      summary: Search books by name/author (protected)
+      security:
+        - OAuth2Password: []
+      parameters:
+        - in: query
+          name: q
+          required: true
+          schema: { type: string }
+        - in: query
+          name: offset
+          schema: { type: integer, minimum: 0, default: 0 }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, default: 10 }
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /books/{book_id}:
+    get:
+      summary: Get a book (protected)
+      security:
+        - OAuth2Password: []
+      parameters:
+        - in: path
+          name: book_id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Book" }
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+    put:
+      summary: Update a book (protected)
+      security:
+        - OAuth2Password: []
+      parameters:
+        - in: path
+          name: book_id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BookUpdate" }
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+    delete:
+      summary: Delete a book (protected)
+      security:
+        - OAuth2Password: []
+      parameters:
+        - in: path
+          name: book_id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Deleted
+        "404":
+          description: Not Found
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /books/{book_id}/borrow:
+    post:
+      summary: Borrow a book (protected)
+      security:
+        - OAuth2Password: []
+      parameters:
+        - in: path
+          name: book_id
+          required: true
+          schema: { type: integer }
+      responses:
+        "201":
+          description: Borrow created & book set to borrowed
+        "409":
+          description: Conflict (not available)
+        "404":
+          description: Not Found
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /books/{book_id}/return:
+    post:
+      summary: Return a book (protected)
+      security:
+        - OAuth2Password: []
+      parameters:
+        - in: path
+          name: book_id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Returned & book set to free
+        "409":
+          description: Conflict (not borrowed)
+        "404":
+          description: Not Found
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
