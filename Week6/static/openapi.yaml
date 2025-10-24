@@ -7,7 +7,7 @@ info:
     All book management endpoints are protected (Bearer JWT).
 
 servers:
-  - url: http://localhost:5001/api/v1
+  - url: /api/v1
 
 components:
   securitySchemes:

@@ -1,4 +1,5 @@
 import datetime as dt
+from datetime import timezone
 from functools import wraps
 from typing import Optional
 
@@ -44,7 +45,7 @@ def verify_password(raw: str, hashed: str) -> bool:
 
 # -------- JWT --------
 def create_access_token(sub: str, expires_minutes: int = ACCESS_TOKEN_EXPIRE_MINUTES) -> str:
-    now = dt.datetime.utcnow()
+    now = dt.datetime.now(timezone.utc())
     payload = {
         "sub": sub,
         "iat": now,
@@ -53,6 +54,7 @@ def create_access_token(sub: str, expires_minutes: int = ACCESS_TOKEN_EXPIRE_MIN
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
+
 def decode_token(token: str) -> dict:
     try:
         return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -60,6 +62,7 @@ def decode_token(token: str) -> dict:
         raise UnauthorizedError("Token expired")
     except jwt.InvalidTokenError:
         raise UnauthorizedError("Invalid token")
+    
 
 def get_current_user() -> User:
     auth = request.headers.get("Authorization", "")
@@ -75,6 +78,7 @@ def get_current_user() -> User:
         if not user:
             raise UnauthorizedError("User not found")
         return user
+    
 
 def login_required(fn):
     @wraps(fn)

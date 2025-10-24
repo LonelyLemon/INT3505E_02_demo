@@ -1,11 +1,21 @@
+import os
+from pathlib import Path
+
 from flask import Flask, jsonify, send_from_directory
 from flask_swagger_ui import get_swaggerui_blueprint
 from config import Base, engine
 from router import api
-import os
+
+
+BASE_DIR = Path(__file__).resolve().parent
+
 
 def create_app():
-    app = Flask(__name__)
+    app = Flask(
+        __name__,
+        static_folder=str(BASE_DIR / "static"),
+        static_url_path="/static",
+    )
 
     # Tạo bảng
     Base.metadata.create_all(bind=engine)
@@ -27,7 +37,7 @@ def create_app():
 
     @app.route("/static/<path:filename>")
     def static_files(filename):
-        return send_from_directory(os.path.join(app.root_path, "static"), filename)
+        return send_from_directory(app.static_folder, filename)
 
     @app.route("/")
     def home():
@@ -38,4 +48,5 @@ def create_app():
 app = create_app()
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+    port = int(os.getenv("PORT", "5001"))
+    app.run(debug=True, port=port)
