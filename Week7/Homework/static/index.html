@@ -1,0 +1,210 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Library Demo</title>
+  <style>
+    body{font-family:system-ui,Arial;margin:20px;color:#eaeaea;background:#111}
+    h1,h2{color:#fff}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    .card{border:1px solid #333;border-radius:12px;padding:12px;background:#1a1a1a}
+    input,button,select{padding:8px;border-radius:8px;border:1px solid #333;background:#0f0f0f;color:#fff}
+    button{cursor:pointer}
+    .row{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
+    pre{background:#0b0b0b;padding:10px;border-radius:8px;max-height:220px;overflow:auto}
+    .muted{color:#aaa;font-size:.9em}
+  </style>
+</head>
+<body>
+  <h1>Book Library Demo</h1>
+  <p class="muted">Three JWT storage modes: localStorage, sessionStorage, and HTTP-only cookie</p>
+
+  <div class="grid">
+    <div class="card">
+      <h2>localStorage</h2>
+      <div class="row"><input id="l_user" placeholder="username"><input id="l_pass" type="password" placeholder="password"></div>
+      <div class="row">
+        <button onclick="signup('local')">Signup</button>
+        <button onclick="login('local')">Login</button>
+        <button onclick="logoutLocal()">Clear Tokens</button>
+      </div>
+      <div class="row">
+        <button onclick="listBooks('local')">GET /books</button>
+        <input id="l_book_name" placeholder="book_name"><input id="l_author" placeholder="author">
+        <button onclick="createBook('local')">POST /books</button>
+      </div>
+      <div class="row">
+        <input id="l_book_id" type="number" placeholder="book_id">
+        <button onclick="getBook('local')">GET /books/{id}</button>
+        <button onclick="delBook('local')">DELETE /books/{id}</button>
+        <button onclick="borrow('local')">POST /books/{id}/borrow</button>
+        <button onclick="retBook('local')">POST /books/{id}/return</button>
+      </div>
+      <div class="row"><button onclick="myBorrows('local')">GET /me/borrows</button></div>
+      <pre id="local_out"></pre>
+    </div>
+
+    <div class="card">
+      <h2>sessionStorage</h2>
+      <div class="row"><input id="s_user" placeholder="username"><input id="s_pass" type="password" placeholder="password"></div>
+      <div class="row">
+        <button onclick="signup('session')">Signup</button>
+        <button onclick="login('session')">Login</button>
+        <button onclick="logoutSession()">Clear Tokens</button>
+      </div>
+      <div class="row">
+        <button onclick="listBooks('session')">GET /books</button>
+        <input id="s_book_name" placeholder="book_name"><input id="s_author" placeholder="author">
+        <button onclick="createBook('session')">POST /books</button>
+      </div>
+      <div class="row">
+        <input id="s_book_id" type="number" placeholder="book_id">
+        <button onclick="getBook('session')">GET /books/{id}</button>
+        <button onclick="delBook('session')">DELETE /books/{id}</button>
+        <button onclick="borrow('session')">POST /books/{id}/borrow</button>
+        <button onclick="retBook('session')">POST /books/{id}/return</button>
+      </div>
+      <div class="row"><button onclick="myBorrows('session')">GET /me/borrows</button></div>
+      <pre id="session_out"></pre>
+    </div>
+
+    <div class="card">
+      <h2>HTTP-only Cookie</h2>
+      <div class="row"><input id="c_user" placeholder="username"><input id="c_pass" type="password" placeholder="password"></div>
+      <div class="row">
+        <button onclick="signup('cookie')">Signup</button>
+        <button onclick="loginCookie()">Login Cookie</button>
+        <button onclick="logoutCookie()">Logout Cookie</button>
+      </div>
+      <div class="row">
+        <button onclick="listBooks('cookie')">GET /books</button>
+        <input id="c_book_name" placeholder="book_name"><input id="c_author" placeholder="author">
+        <button onclick="createBook('cookie')">POST /books</button>
+      </div>
+      <div class="row">
+        <input id="c_book_id" type="number" placeholder="book_id">
+        <button onclick="getBook('cookie')">GET /books/{id}</button>
+        <button onclick="delBook('cookie')">DELETE /books/{id}</button>
+        <button onclick="borrow('cookie')">POST /books/{id}/borrow</button>
+        <button onclick="retBook('cookie')">POST /books/{id}/return</button>
+      </div>
+      <div class="row"><button onclick="myBorrows('cookie')">GET /me/borrows</button></div>
+      <pre id="cookie_out"></pre>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>Swagger</h2>
+    <p class="muted">Use the OpenAPI file at <code>/static/openapi.yaml</code> with your preferred Swagger UI.</p>
+  </div>
+
+  <script>
+    const API = location.origin + "/api"
+    function out(t){return document.getElementById(t)}
+    function setTok(mode,a,r){if(mode==='local'){localStorage.setItem('access',a);localStorage.setItem('refresh',r)}if(mode==='session'){sessionStorage.setItem('access',a);sessionStorage.setItem('refresh',r)}}
+    function getTok(mode){if(mode==='local'){return {a:localStorage.getItem('access'),r:localStorage.getItem('refresh')}}if(mode==='session'){return {a:sessionStorage.getItem('access'),r:sessionStorage.getItem('refresh')}}return {a:null,r:null}}
+    function clearTok(mode){if(mode==='local'){localStorage.removeItem('access');localStorage.removeItem('refresh')}if(mode==='session'){sessionStorage.removeItem('access');sessionStorage.removeItem('refresh')}}
+    async function req(path,method,body,mode){
+      const h={}
+      const t=getTok(mode).a
+      if(t) h.Authorization=`Bearer ${t}`
+      const opt={method,headers:{'Content-Type':'application/json',...h}}
+      if(body) opt.body=JSON.stringify(body)
+      if(mode==='cookie') opt.credentials='include'
+      const res=await fetch(API+path,opt)
+      if(res.status===401&&mode!=='cookie'){
+        const rTok=getTok(mode).r
+        if(rTok){
+          const ref=await fetch(API+'/auth/refresh',{method:'POST',headers:{'Authorization':'Bearer '+rTok}})
+          if(ref.ok){
+            const nj=await ref.json()
+            setTok(mode,nj.access_token,getTok(mode).r)
+            return req(path,method,body,mode)
+          }
+        }
+      }
+      return res
+    }
+    async function signup(mode){
+      const u=mode==='local'?out('l_user').value:mode==='session'?out('s_user').value:out('c_user').value
+      const p=mode==='local'?out('l_pass').value:mode==='session'?out('s_pass').value:out('c_pass').value
+      const res=await fetch(API+'/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})})
+      const j=await res.json()
+      if(mode==='local') out('local_out').textContent=JSON.stringify(j,null,2)
+      if(mode==='session') out('session_out').textContent=JSON.stringify(j,null,2)
+      if(mode==='cookie') out('cookie_out').textContent=JSON.stringify(j,null,2)
+    }
+    async function login(mode){
+      const u=mode==='local'?out('l_user').value:out('s_user').value
+      const p=mode==='local'?out('l_pass').value:out('s_pass').value
+      const res=await fetch(API+'/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})})
+      const j=await res.json()
+      if(res.ok){setTok(mode,j.access_token,j.refresh_token)}
+      if(mode==='local') out('local_out').textContent=JSON.stringify(j,null,2)
+      if(mode==='session') out('session_out').textContent=JSON.stringify(j,null,2)
+    }
+    async function loginCookie(){
+      const u=out('c_user').value
+      const p=out('c_pass').value
+      const res=await fetch(API+'/auth/login-cookie',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})})
+      const j=await res.json()
+      out('cookie_out').textContent=JSON.stringify(j,null,2)
+    }
+    async function logoutCookie(){
+      const res=await fetch(API+'/auth/logout-cookie',{method:'POST',credentials:'include'})
+      const j=await res.json()
+      out('cookie_out').textContent=JSON.stringify(j,null,2)
+    }
+    function logoutLocal(){clearTok('local');out('local_out').textContent='{}'}
+    function logoutSession(){clearTok('session');out('session_out').textContent='{}'}
+    async function listBooks(mode){
+      const r=await req('/books','GET',null,mode);const j=await r.json()
+      if(mode==='local') out('local_out').textContent=JSON.stringify(j,null,2)
+      if(mode==='session') out('session_out').textContent=JSON.stringify(j,null,2)
+      if(mode==='cookie') out('cookie_out').textContent=JSON.stringify(j,null,2)
+    }
+    async function createBook(mode){
+      const name=mode==='local'?out('l_book_name').value:mode==='session'?out('s_book_name').value:out('c_book_name').value
+      const author=mode==='local'?out('l_author').value:mode==='session'?out('s_author').value:out('c_author').value
+      const r=await req('/books','POST',{book_name:name,author},mode);const j=await r.json()
+      if(mode==='local') out('local_out').textContent=JSON.stringify(j,null,2)
+      if(mode==='session') out('session_out').textContent=JSON.stringify(j,null,2)
+      if(mode==='cookie') out('cookie_out').textContent=JSON.stringify(j,null,2)
+    }
+    async function getBook(mode){
+      const id=mode==='local'?out('l_book_id').value:mode==='session'?out('s_book_id').value:out('c_book_id').value
+      const r=await req('/books/'+id,'GET',null,mode);const j=await r.json()
+      if(mode==='local') out('local_out').textContent=JSON.stringify(j,null,2)
+      if(mode==='session') out('session_out').textContent=JSON.stringify(j,null,2)
+      if(mode==='cookie') out('cookie_out').textContent=JSON.stringify(j,null,2)
+    }
+    async function delBook(mode){
+      const id=mode==='local'?out('l_book_id').value:mode==='session'?out('s_book_id').value:out('c_book_id').value
+      const r=await req('/books/'+id,'DELETE',null,mode);const j=await r.json()
+      if(mode==='local') out('local_out').textContent=JSON.stringify(j,null,2)
+      if(mode==='session') out('session_out').textContent=JSON.stringify(j,null,2)
+      if(mode==='cookie') out('cookie_out').textContent=JSON.stringify(j,null,2)
+    }
+    async function borrow(mode){
+      const id=mode==='local'?out('l_book_id').value:mode==='session'?out('s_book_id').value:out('c_book_id').value
+      const r=await req('/books/'+id+'/borrow','POST',{},mode);const j=await r.json()
+      if(mode==='local') out('local_out').textContent=JSON.stringify(j,null,2)
+      if(mode==='session') out('session_out').textContent=JSON.stringify(j,null,2)
+      if(mode==='cookie') out('cookie_out').textContent=JSON.stringify(j,null,2)
+    }
+    async function retBook(mode){
+      const id=mode==='local'?out('l_book_id').value:mode==='session'?out('s_book_id').value:out('c_book_id').value
+      const r=await req('/books/'+id+'/return','POST',{},mode);const j=await r.json()
+      if(mode==='local') out('local_out').textContent=JSON.stringify(j,null,2)
+      if(mode==='session') out('session_out').textContent=JSON.stringify(j,null,2)
+      if(mode==='cookie') out('cookie_out').textContent=JSON.stringify(j,null,2)
+    }
+    async function myBorrows(mode){
+      const r=await req('/me/borrows','GET',null,mode);const j=await r.json()
+      if(mode==='local') out('local_out').textContent=JSON.stringify(j,null,2)
+      if(mode==='session') out('session_out').textContent=JSON.stringify(j,null,2)
+      if(mode==='cookie') out('cookie_out').textContent=JSON.stringify(j,null,2)
+    }
+  </script>
+</body>
+</html>

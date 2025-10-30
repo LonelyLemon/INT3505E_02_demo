@@ -1,0 +1,159 @@
+openapi: 3.0.3
+info:
+  title: Book Library API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000/api
+paths:
+  /signup:
+    post:
+      summary: Signup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string }
+                password: { type: string }
+      responses:
+        '201':
+          description: Created
+  /login:
+    post:
+      summary: Login returning tokens in JSON
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string }
+                password: { type: string }
+      responses:
+        '200':
+          description: OK
+  /auth/login-cookie:
+    post:
+      summary: Login and set HTTP-only cookies
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string }
+                password: { type: string }
+      responses:
+        '200':
+          description: OK
+  /auth/logout-cookie:
+    post:
+      summary: Logout cookie session
+      responses:
+        '200':
+          description: OK
+  /auth/refresh:
+    post:
+      summary: Refresh access token
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /books:
+    get:
+      summary: List books
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Create book
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [book_name, author]
+              properties:
+                book_name: { type: string }
+                author: { type: string }
+      responses:
+        '201':
+          description: Created
+  /books/{book_id}:
+    get:
+      summary: Get a book
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: book_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+    delete:
+      summary: Delete a book
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: book_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+  /books/{book_id}/borrow:
+    post:
+      summary: Borrow a book
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: book_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '201':
+          description: Created
+  /books/{book_id}/return:
+    post:
+      summary: Return a book
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: book_id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+  /me/borrows:
+    get:
+      summary: My borrow history
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
