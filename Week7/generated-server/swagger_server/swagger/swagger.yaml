@@ -1,0 +1,39 @@
+openapi: 3.0.0
+info:
+  title: Book Management API
+  version: 1.0.0
+servers:
+- url: /
+paths:
+  /books:
+    get:
+      summary: Lấy danh sách các quyển sách
+      operationId: books_get
+      responses:
+        "200":
+          description: Trả về danh sách các quyển sách
+      x-openapi-router-controller: swagger_server.controllers.default_controller
+    post:
+      summary: Thêm sách mới
+      operationId: books_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Book'
+      responses:
+        "201":
+          description: Sách được thêm thành công
+      x-openapi-router-controller: swagger_server.controllers.default_controller
+components:
+  schemas:
+    Book:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        author:
+          type: string
+
