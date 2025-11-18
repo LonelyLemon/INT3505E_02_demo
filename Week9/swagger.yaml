@@ -1,0 +1,173 @@
+openapi: 3.0.0
+info:
+  title: Books & Payments API (v2)
+  version: "2.0.0"
+  description: Simple demo API (Flask) - users, books, payments. JWT protected endpoints use Bearer tokens.
+servers:
+  - url: http://localhost:5001
+paths:
+  /v2/users/signup:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "201":
+          description: Created
+  /v2/users/login:
+    post:
+      summary: Login and get access + refresh tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "200":
+          description: Tokens returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+  /v2/users/refresh:
+    post:
+      summary: Exchange refresh token for new access token
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: New access token
+  /v2/users/logout_refresh:
+    post:
+      summary: Revoke refresh token (logout)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Refresh token revoked
+  /v2/users/me:
+    get:
+      summary: Get current user's profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  username:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+  /v2/books:
+    get:
+      summary: List books (paginated)
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+          description: Page number (default 1)
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+          description: Items per page (default 10)
+      responses:
+        "200":
+          description: Paginated list of books
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        title:
+                          type: string
+                        author:
+                          type: string
+                        price_cents:
+                          type: integer
+                        price:
+                          type: string
+                  page:
+                    type: integer
+                  per_page:
+                    type: integer
+                  total:
+                    type: integer
+                  pages:
+                    type: integer
+  /v2/payments:
+    post:
+      summary: Create payment (idempotent with Idempotency-Key header)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          schema:
+            type: string
+          description: Unique key to ensure idempotency (UUID)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [book_id]
+              properties:
+                book_id:
+                  type: integer
+      responses:
+        "201":
+          description: Payment created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  msg:
+                    type: string
+                  payment:
+                    type: object
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
