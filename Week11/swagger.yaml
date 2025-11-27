@@ -1,0 +1,177 @@
+openapi: 2.0.0
+info:
+  title: Library Management API
+  description: API book library management.
+  version: 1.0.0
+  contact:
+    email: admin@library.com
+
+servers:
+  - url: http://127.0.0.1:5000
+    description: Local Development Server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Sign up new account.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  example: "admin"
+                password:
+                  type: string
+                  example: "secret123"
+      responses:
+        201:
+          description: Create account successfully
+        400:
+          description: User Existed
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login to receive token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  example: "admin"
+                password:
+                  type: string
+                  example: "secret123"
+      responses:
+        200:
+          description: Login successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    description: JWT Token used for request
+        401:
+          description: Wrong login info
+
+  /books/:
+    get:
+      tags:
+        - Books
+      summary: Get list of books
+      responses:
+        200:
+          description: Book list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Book'
+    
+    post:
+      tags:
+        - Books
+      summary: Add new book (Token required)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: "Harry Potter"
+                author:
+                  type: string
+                  example: "J.K. Rowling"
+      responses:
+        201:
+          description: Add book successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+        401:
+          description: Not Login Yet (Lack of token)
+
+  /books/{book_id}:
+    delete:
+      tags:
+        - Books
+      summary: Remove book using ID (Token required)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: book_id
+          schema:
+            type: integer
+          required: true
+          description: ID of removing book
+      responses:
+        200:
+          description: Remove successfully
+        404:
+          description: Book not found
+
+  /books/webhooks:
+    post:
+      tags:
+        - Webhooks
+      summary: Register Webhook for receiving notification
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+                  example: "http://localhost:6000/callback"
+                event:
+                  type: string
+                  example: "book_created"
+      responses:
+        201:
+          description: Register webhook successfully
+
+components:
+  schemas:
+    Book:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        author:
+          type: string
+        available:
+          boolean
